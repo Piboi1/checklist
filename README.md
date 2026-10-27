@@ -1,29 +1,25 @@
-# Checklist widget
+# Checklist
 
-A macOS desktop widget for today's tasks.
+A Mac menu bar app for today's tasks. No Apple ID or developer account needed.
 
-- **Check off** a task by tapping its circle on the widget.
-- **Add tasks** with the **+** on the widget. It opens a small window with the cursor already in the box. Press return to add one task, or use the list icon to paste a whole list (one task per line; `-`, `1.` and `[ ]` prefixes are stripped).
-- **Empty / all done:** the widget turns into a sunset clock with a 24-hour day bar.
+- The menu bar shows a checklist icon with the number of tasks left. When everything is done it turns into a check mark.
+- Click it to open the list. Click a circle (or the task) to check it off.
+- Type in the box and press return to add a task, or click the clipboard button to add every line on your clipboard as a task. Bullets, numbers and `[ ]` boxes are stripped, so a list pasted from Notes works as is.
+- With no tasks, or when all are done, the popover becomes a sunset clock with a 24-hour day bar.
 - Tasks finished on an earlier day are removed automatically; unfinished ones carry over.
+- The `...` button has "Clear completed" and "Quit".
 
-Native widgets can't contain a text field, which is why adding goes through the small app window.
+Tasks are stored in `~/Library/Application Support/Checklist/tasks.json`.
 
-## Setup (macOS 14+, Xcode 15+)
+## Build and run (macOS 14+, Xcode installed)
 
 ```sh
-brew install xcodegen
+git clone -b claude/admiring-allen-n5gxe5 https://github.com/Piboi1/checklist.git
+cd checklist
+./build.sh
+open Checklist.app
 ```
 
-1. In `project.yml`, set `DEVELOPMENT_TEAM` (your team ID; a free Apple ID works) and change `BUNDLE_PREFIX` to something unique, e.g. `com.yourname`.
-2. `xcodegen` creates `Checklist.xcodeproj`. Open it.
-3. Pick the **Checklist** scheme and press Run once. This installs the app and registers the widget.
-4. Right-click the desktop, choose **Edit Widgets**, search **Checklist**, and add the small, medium or large size.
+If it says the Xcode license hasn't been accepted, run `sudo xcodebuild -license accept` and try again.
 
-If the widget stays empty after you add tasks, check that both targets have the same App Group under Signing & Capabilities.
-
-## Layout
-
-- `Shared/` task storage (JSON in the App Group container) and the check-off intent, compiled into both targets
-- `Widget/` the widget (task list and empty state)
-- `App/` the quick-add window
+To keep it, move `Checklist.app` into your Applications folder. To start it at login, add it under System Settings > General > Login Items.

@@ -1,5 +1,4 @@
 import Foundation
-import WidgetKit
 
 struct TodoItem: Codable, Identifiable, Hashable {
     var id = UUID()
@@ -16,25 +15,14 @@ extension Array where Element == TodoItem {
     }
 }
 
-/// Plain JSON file in the App Group container, so the app and the widget
-/// extension read and write the same list.
+/// The task list is a JSON file in ~/Library/Application Support/Checklist.
 enum TodoStore {
-    static let widgetKind = "ChecklistWidget"
-
     private static var fileURL: URL {
         let fm = FileManager.default
-        let base: URL
-        if let group = Bundle.main.object(forInfoDictionaryKey: "AppGroupID") as? String,
-           let container = fm.containerURL(forSecurityApplicationGroupIdentifier: group) {
-            base = container
-        } else {
-            // Falls back to a per-process folder; the widget will not see this
-            // list, so the App Group needs to be set up (see README).
-            base = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("Checklist", isDirectory: true)
-        }
-        try? fm.createDirectory(at: base, withIntermediateDirectories: true)
-        return base.appendingPathComponent("tasks.json")
+        let folder = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Checklist", isDirectory: true)
+        try? fm.createDirectory(at: folder, withIntermediateDirectories: true)
+        return folder.appendingPathComponent("tasks.json")
     }
 
     static func load() -> [TodoItem] {
@@ -51,46 +39,22 @@ enum TodoStore {
         }
     }
 
-    private static func save(_ items: [TodoItem]) {
+    static func save(_ items: [TodoItem]) {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         guard let data = try? encoder.encode(items) else { return }
         try? data.write(to: fileURL, options: .atomic)
-        WidgetCenter.shared.reloadTimelines(ofKind: widgetKind)
-    }
-
-    private static func mutate(_ body: (inout [TodoItem]) -> Void) {
-        var items = load()
-        body(&items)
-        save(items)
     }
 
     /// One task per line. Leading bullets, numbers and `[ ]` boxes are stripped,
     /// so a list pasted from Notes or Markdown works as is.
-    static func add(lines text: String) {
+    static func parse(lines text: String) -> [TodoItem] {
         let bullets = #"^\s*([-*•]\s+|\d+[.)]\s+|\[[ xX]?\]\s*)+"#
-        let titles = text
+        return text
             .components(separatedBy: .newlines)
             .map { $0.replacingOccurrences(of: bullets, with: "", options: .regularExpression) }
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
-        guard !titles.isEmpty else { return }
-        mutate { $0.append(contentsOf: titles.map { TodoItem(title: $0) }) }
-    }
-
-    static func toggle(_ id: UUID) {
-        mutate { items in
-            guard let i = items.firstIndex(where: { $0.id == id }) else { return }
-            items[i].isDone.toggle()
-            items[i].completedAt = items[i].isDone ? Date() : nil
-        }
-    }
-
-    static func delete(_ id: UUID) {
-        mutate { $0.removeAll { $0.id == id } }
-    }
-
-    static func clearCompleted() {
-        mutate { $0.removeAll(where: \.isDone) }
+            .map { TodoItem(title: $0) }
     }
 }
